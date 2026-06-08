@@ -1,0 +1,16 @@
+Аудит структуры проекта: E:\Project\tree-generator
+============================================================
+├── build.bat
+├── dev.bat
+├── src
+│   ├── icon.png
+│   └── index.html
+└── src-tauri
+    ├── Cargo.lock
+    ├── Cargo.toml
+    ├── build.rs
+    ├── icons
+    │   └── icon.ico
+    ├── src
+    │   └── main.rs
+    └── tauri.conf.json

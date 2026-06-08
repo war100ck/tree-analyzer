@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализатор структуры проекта</title>
+    <!-- Подключаем вашу иконку для вкладки/окна -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            border-radius: 0 !important;
+            outline: none;
+        }
+        body {
+            font-family: 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        header {
+            height: 36px;
+            background-color: #202020;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0;
+            flex-shrink: 0;
+            user-select: none;
+            border-bottom: 1px solid #333333;
+            cursor: default;
+        }
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            padding-left: 12px;
+            flex: 1; /* Занимает все место, чтобы можно было тянуть за любую точку */
+        }
+        .app-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 10px;
+        }
+        .app-title {
+            font-size: 12px;
+            font-weight: 400;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+        .window-controls {
+            display: flex;
+            height: 100%;
+        }
+        .window-controls button {
+            width: 46px; /* ИСПРАВЛЕНО: было width46px; */
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            cursor: default;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: none;
+        }
+        .window-controls button svg {
+            width: 10px;
+            height: 10px;
+            fill: currentColor;
+        }
+        .window-controls button:hover {
+            background-color: #3e3e42;
+        }
+        .window-controls button.close-btn:hover {
+            background-color: #e81123;
+        }
+        .window-controls button:active {
+            background-color: #0078D7;
+        }
+        .window-controls button.close-btn:active {
+            background-color: #f1707a;
+        }
+
+        main {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .control-group label {
+            font-size: 11px;
+            color: #a0a0a0;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .input-row {
+            display: flex;
+            gap: 0;
+        }
+        input[type="text"] {
+            flex: 1;
+            background-color: #1f1f1f;
+            border: 1px solid #555555;
+            border-right: none;
+            color: #ffffff;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        input[type="text"]:focus {
+            border-color: #0078D7;
+            border-right: 1px solid #0078D7;
+        }
+        input[type="text"]::placeholder {
+            color: #666666;
+        }
+        button.action-btn {
+            background-color: #2d2d30;
+            color: #ffffff;
+            border: 1px solid #555555;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: none;
+        }
+        button.action-btn:hover {
+            background-color: #3e3e42;
+            border-color: #ffffff;
+        }
+        button.action-btn:active {
+            background-color: #0078D7;
+            border-color: #0078D7;
+        }
+        button.action-btn:disabled {
+            background-color: #1f1f1f;
+            border-color: #333333;
+            color: #666666;
+            cursor: not-allowed;
+        }
+        .btn-add {
+            border-left: none;
+        }
+        button.primary {
+            background-color: #0078D7;
+            border-color: #0078D7;
+            margin-top: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+        button.primary:hover {
+            background-color: #1084d9;
+            border-color: #1084d9;
+        }
+        button.primary:active {
+            background-color: #005a9e;
+            border-color: #005a9e;
+        }
+        .log-panel {
+            flex: 1;
+            background-color: #0d0d0d;
+            border: 1px solid #333333;
+            padding: 12px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            color: #cccccc;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-success { color: #00ff00; }
+        .log-error { color: #ff4444; }
+        .log-info { color: #0078D7; font-weight: bold; }
+        .log-warning { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <header id="titlebar">
+        <div class="title-bar-left">
+            <img src="icon.png" class="app-icon" alt="icon">
+            <span class="app-title">АНАЛИЗАТОР СТРУКТУРЫ ПРОЕКТА</span>
+        </div>
+        <div class="window-controls">
+            <button onclick="minimizeWindow()" title="Свернуть">
+                <svg viewBox="0 0 10 10"><path d="M0 5h10v1H0z"/></svg>
+            </button>
+            <button class="close-btn" onclick="closeWindow()" title="Закрыть">
+                <svg viewBox="0 0 10 10"><path d="M1.5 0L0 1.5 3.5 5 0 8.5 1.5 10 5 6.5 8.5 10 10 8.5 6.5 5 10 1.5 8.5 0 5 3.5z"/></svg>
+            </button>
+        </div>
+    </header>
+    
+    <main>
+        <div class="control-group">
+            <label>Целевая папка для анализа</label>
+            <div class="input-row">
+                <input type="text" id="targetPath" placeholder="Путь к корневой папке проекта..." readonly>
+                <button class="action-btn" onclick="selectTargetFolder()">Обзор</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Исключения (папки и файлы)</label>
+            <div class="input-row">
+                <input type="text" id="exclusions" value="" placeholder="Введите имена через запятую или добавьте кнопками">
+                <button class="action-btn btn-add" onclick="addExclusion('folder')">+ Папка</button>
+                <button class="action-btn btn-add" onclick="addExclusion('file')">+ Файл</button>
+            </div>
+        </div>
+
+        <button class="primary" id="generateBtn" onclick="generateReport()">Сгенерировать отчет</button>
+
+        <div class="control-group" style="flex: 1; display: flex; flex-direction: column;">
+            <label>Журнал операций</label>
+            <div class="log-panel" id="logPanel">Готов к работе. Ожидание выбора целевой директории...</div>
+        </div>
+    </main>
+
+    <script>
+        const { appWindow } = window.__TAURI__.window;
+        const targetPathInput = document.getElementById('targetPath');
+        const exclusionsInput = document.getElementById('exclusions');
+        const logPanel = document.getElementById('logPanel');
+        const generateBtn = document.getElementById('generateBtn');
+        const titlebar = document.getElementById('titlebar');
+
+        // --- Управление окном ---
+        async function minimizeWindow() {
+            await appWindow.minimize();
+        }
+
+        async function closeWindow() {
+            await appWindow.close();
+        }
+
+        // Перетаскивание окна через JS (самый надежный способ в Tauri 1.x)
+        titlebar.addEventListener('mousedown', (e) => {
+            // Игнорируем клики по кнопкам управления, чтобы они оставались кликабельными
+            if (e.target.closest('.window-controls')) return;
+            appWindow.startDragging();
+        });
+
+        // --- Логика приложения ---
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : type === 'warning' ? 'log-warning' : 'log-info';
+            logPanel.innerHTML += `<span class="${colorClass}">[${timestamp}] ${message}</span>\n`;
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        async function selectTargetFolder() {
+            try {
+                const path = await window.__TAURI__.dialog.open({
+                    directory: true,
+                    multiple: false,
+                    title: 'Выберите корневую папку проекта для аудита'
+                });
+                if (path) {
+                    targetPathInput.value = path;
+                    log(`Целевая папка установлена: ${path}`, 'info');
+                }
+            } catch (error) {
+                log(`Ошибка выбора папки: ${error}`, 'error');
+            }
+        }
+
+        async function addExclusion(type) {
+            try {
+                const isFolder = type === 'folder';
+                const paths = await window.__TAURI__.dialog.open({
+                    directory: isFolder,
+                    multiple: true,
+                    title: isFolder ? 'Выберите подпапки для исключения' : 'Выберите файлы для исключения'
+                });
+                
+                if (paths) {
+                    const currentExclusions = exclusionsInput.value.split(',').map(s => s.trim()).filter(s => s);
+                    const newExclusions = Array.isArray(paths) ? paths : [paths];
+                    const addedNames = [];
+                    const skippedNames = [];
+                    
+                    newExclusions.forEach(p => {
+                        const itemName = p.split(/[\\/]/).pop();
+                        if (itemName) {
+                            if (!currentExclusions.includes(itemName)) {
+                                currentExclusions.push(itemName);
+                                addedNames.push(itemName);
+                            } else {
+                                skippedNames.push(itemName);
+                            }
+                        }
+                    });
+                    
+                    exclusionsInput.value = currentExclusions.join(', ');
+                    
+                    if (addedNames.length > 0) {
+                        log(`Добавлено в исключения: ${addedNames.join(', ')}`, 'info');
+                    }
+                    if (skippedNames.length > 0) {
+                        log(`Пропущено (уже в списке): ${skippedNames.join(', ')}`, 'warning');
+                    }
+                }
+            } catch (error) {
+                log(`Ошибка добавления исключения: ${error}`, 'error');
+            }
+        }
+
+        async function generateReport() {
+            const path = targetPathInput.value.trim();
+            if (!path) {
+                log('Ошибка: Целевая папка не выбрана.', 'error');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'ОБРАБОТКА...';
+            log('Запуск сканирования структуры...', 'info');
+
+            try {
+                const exclusions = exclusionsInput.value
+                    .split(',')
+                    .map(item => item.trim())
+                    .filter(item => item.length > 0);
+
+                const result = await window.__TAURI__.tauri.invoke('generate_tree', {
+                    path: path,
+                    exclusions: exclusions
+                });
+
+                log(result, 'success');
+            } catch (error) {
+                log(`Критическая ошибка: ${error}`, 'error');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'СГЕНЕРИРОВАТЬ ОТЧЕТ';
+            }
+        }
+    </script>
+</body>
+</html>
